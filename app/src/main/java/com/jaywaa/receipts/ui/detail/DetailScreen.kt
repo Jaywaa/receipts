@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -258,16 +260,16 @@ fun DetailScreen(
                             }
                         }
 
-                        if (!receipt.sent) {
-                            Button(
-                                onClick = { showDeleteDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error
-                                )
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = null)
-                                Text("  Delete Receipt")
+                        OutlinedButton(
+                            onClick = { viewModel.toggleSentStatus() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (receipt.sent) {
+                                Icon(Icons.Default.MarkEmailUnread, contentDescription = null)
+                                Text("  Mark as Unsent")
+                            } else {
+                                Icon(Icons.Default.MarkEmailRead, contentDescription = null)
+                                Text("  Mark as Sent")
                             }
                         }
                     }

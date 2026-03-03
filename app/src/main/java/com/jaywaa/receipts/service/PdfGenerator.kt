@@ -20,6 +20,7 @@ class PdfGenerator(private val context: Context) {
         private const val A4_WIDTH = 595
         private const val A4_HEIGHT = 842
         private const val MARGIN = 40
+        private const val MAX_PHOTO_PX = 1200
     }
 
     fun generate(receipts: List<Receipt>): File {
@@ -132,25 +133,53 @@ class PdfGenerator(private val context: Context) {
         }
         y += 30f
 
-        val photoFile = File(receipt.photoPath)
-        if (photoFile.exists()) {
-            val bitmap = BitmapFactory.decodeFile(receipt.photoPath)
-            if (bitmap != null) {
-                val availableWidth = A4_WIDTH - 2 * MARGIN
-                val availableHeight = A4_HEIGHT - y.toInt() - MARGIN
-                val scale = minOf(
-                    availableWidth.toFloat() / bitmap.width,
-                    availableHeight.toFloat() / bitmap.height
-                )
-                val scaledWidth = (bitmap.width * scale).toInt()
-                val scaledHeight = (bitmap.height * scale).toInt()
-                val left = MARGIN + (availableWidth - scaledWidth) / 2
+        val bitmap = decodeScaledPhoto(receipt.photoPath) ?: return
+        val availableWidth = A4_WIDTH - 2 * MARGIN
+        val availableHeight = A4_HEIGHT - y.toInt() - MARGIN
+        val scale = minOf(
+            availableWidth.toFloat() / bitmap.width,
+            availableHeight.toFloat() / bitmap.height
+        )
+        val scaledWidth = (bitmap.width * scale).toInt()
+        val scaledHeight = (bitmap.height * scale).toInt()
+        val left = MARGIN + (availableWidth - scaledWidth) / 2
 
-                val scaled = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
-                canvas.drawBitmap(scaled, left.toFloat(), y, null)
-                if (scaled !== bitmap) scaled.recycle()
-                bitmap.recycle()
-            }
+        val scaled = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+        canvas.drawBitmap(scaled, left.toFloat(), y, null)
+        if (scaled !== bitmap) scaled.recycle()
+        bitmap.recycle()
+    }
+
+    private fun decodeScaledPhoto(path: String): Bitmap? {
+        val file = File(path)
+        if (!file.exists()) return null
+
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, opts)
+        if (opts.outWidth <= 0 || opts.outHeight <= 0) return null
+
+        var sampleSize = 1
+        val longestSide = maxOf(opts.outWidth, opts.outHeight)
+        while (longestSide / sampleSize > MAX_PHOTO_PX * 2) {
+            sampleSize *= 2
         }
+
+        val decoded = BitmapFactory.Options().run {
+            inSampleSize = sampleSize
+            BitmapFactory.decodeFile(path, this)
+        } ?: return null
+
+        val maxSide = maxOf(decoded.width, decoded.height)
+        if (maxSide <= MAX_PHOTO_PX) return decoded
+
+        val ratio = MAX_PHOTO_PX.toFloat() / maxSide
+        val result = Bitmap.createScaledBitmap(
+            decoded,
+            (decoded.width * ratio).toInt(),
+            (decoded.height * ratio).toInt(),
+            true
+        )
+        if (result !== decoded) decoded.recycle()
+        return result
     }
 }

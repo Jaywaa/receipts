@@ -35,6 +35,8 @@ class ReceiptRepository(private val context: Context) {
 
     suspend fun markAsSent(ids: List<Long>) = dao.markAsSent(ids)
 
+    suspend fun markAsUnsent(ids: List<Long>) = dao.markAsUnsent(ids)
+
     suspend fun savePhoto(uri: Uri): String = withContext(Dispatchers.IO) {
         val inputStream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Cannot open URI: $uri")

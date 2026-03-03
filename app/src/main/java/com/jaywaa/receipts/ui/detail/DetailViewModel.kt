@@ -88,4 +88,21 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.value = _uiState.value.copy(deleted = true)
         }
     }
+
+    fun toggleSentStatus() {
+        val receipt = _uiState.value.receipt ?: return
+        viewModelScope.launch {
+            if (receipt.sent) {
+                repository.markAsUnsent(listOf(receipt.id))
+                _uiState.value = _uiState.value.copy(
+                    receipt = receipt.copy(sent = false, sentAt = null)
+                )
+            } else {
+                repository.markAsSent(listOf(receipt.id))
+                _uiState.value = _uiState.value.copy(
+                    receipt = receipt.copy(sent = true, sentAt = System.currentTimeMillis())
+                )
+            }
+        }
+    }
 }

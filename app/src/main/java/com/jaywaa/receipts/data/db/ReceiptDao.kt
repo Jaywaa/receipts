@@ -32,4 +32,7 @@ interface ReceiptDao {
 
     @Query("UPDATE receipts SET sent = 1, sentAt = :sentAt WHERE id IN (:ids)")
     suspend fun markAsSent(ids: List<Long>, sentAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE receipts SET sent = 0, sentAt = NULL WHERE id IN (:ids)")
+    suspend fun markAsUnsent(ids: List<Long>)
 }

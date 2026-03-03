@@ -1,8 +1,10 @@
 package com.jaywaa.receipts.ui.home
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,12 +22,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -62,7 +69,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onAddReceipt: () -> Unit,
@@ -73,36 +80,76 @@ fun HomeScreen(
 ) {
     val unsentReceipts by viewModel.unsentReceipts.collectAsState()
     val sentReceipts by viewModel.sentReceipts.collectAsState()
+    val selectedIds by viewModel.selectedIds.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
+    val isSelecting = selectedIds.isNotEmpty()
     val totalUnsent = unsentReceipts.sumOf { it.amount }
+    val currentReceipts = if (selectedTab == 0) unsentReceipts else sentReceipts
+
+    LaunchedEffect(selectedTab) {
+        viewModel.clearSelection()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Receipts") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+            if (isSelecting) {
+                TopAppBar(
+                    title = { Text("${selectedIds.size} selected") },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear selection")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.selectAll(currentReceipts.map { it.id })
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select all")
+                        }
+                        if (selectedTab == 0) {
+                            IconButton(onClick = { viewModel.markSelectedAsSent() }) {
+                                Icon(Icons.Default.MarkEmailRead, contentDescription = "Mark as Sent")
+                            }
+                        } else {
+                            IconButton(onClick = { viewModel.markSelectedAsUnsent() }) {
+                                Icon(Icons.Default.MarkEmailUnread, contentDescription = "Mark as Unsent")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("Receipts") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    actions = {
+                        IconButton(onClick = onSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAddReceipt,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Receipt") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            if (!isSelecting) {
+                ExtendedFloatingActionButton(
+                    onClick = onAddReceipt,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Add Receipt") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         },
         bottomBar = {
-            if (unsentReceipts.isNotEmpty()) {
+            if (!isSelecting && unsentReceipts.isNotEmpty()) {
                 SendReportBar(
                     count = unsentReceipts.size,
                     total = totalUnsent,
@@ -130,22 +177,30 @@ fun HomeScreen(
                 )
             }
 
-            val receipts = if (selectedTab == 0) unsentReceipts else sentReceipts
             val emptyMessage = if (selectedTab == 0) "No unsent receipts" else "No sent receipts yet"
 
-            if (receipts.isEmpty()) {
+            if (currentReceipts.isEmpty()) {
                 EmptyState(message = emptyMessage)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    items(receipts, key = { it.id }) { receipt ->
-                        SwipeToDeleteReceiptItem(
-                            receipt = receipt,
-                            onClick = { onReceiptClick(receipt.id) },
-                            onDelete = { viewModel.deleteReceipt(receipt) }
-                        )
+                    items(currentReceipts, key = { it.id }) { receipt ->
+                        if (isSelecting) {
+                            SelectableReceiptItem(
+                                receipt = receipt,
+                                selected = selectedIds.contains(receipt.id),
+                                onClick = { viewModel.toggleSelection(receipt.id) }
+                            )
+                        } else {
+                            SwipeToDeleteReceiptItem(
+                                receipt = receipt,
+                                onClick = { onReceiptClick(receipt.id) },
+                                onLongClick = { viewModel.toggleSelection(receipt.id) },
+                                onDelete = { viewModel.deleteReceipt(receipt) }
+                            )
+                        }
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
@@ -177,11 +232,12 @@ private fun EmptyState(message: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SwipeToDeleteReceiptItem(
     receipt: Receipt,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
@@ -217,16 +273,84 @@ private fun SwipeToDeleteReceiptItem(
         },
         enableDismissFromStartToEnd = false
     ) {
-        ReceiptItem(receipt = receipt, onClick = onClick)
+        ReceiptItem(receipt = receipt, onClick = onClick, onLongClick = onLongClick)
     }
 }
 
 @Composable
-private fun ReceiptItem(receipt: Receipt, onClick: () -> Unit) {
+private fun SelectableReceiptItem(
+    receipt: Receipt,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                MaterialTheme.colorScheme.secondaryContainer
+            else
+                MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = { onClick() }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AsyncImage(
+                model = File(receipt.photoPath),
+                contentDescription = "Receipt photo",
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = formatDate(receipt.date),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                if (!receipt.note.isNullOrBlank()) {
+                    Text(
+                        text = receipt.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Text(
+                text = formatZar(receipt.amount),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ReceiptItem(
+    receipt: Receipt,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 4.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {

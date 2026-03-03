@@ -5,8 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jaywaa.receipts.data.db.Receipt
 import com.jaywaa.receipts.data.repository.ReceiptRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -18,6 +20,43 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val sentReceipts: StateFlow<List<Receipt>> = repository.getSentReceipts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
+
+    val isSelecting: Boolean get() = _selectedIds.value.isNotEmpty()
+
+    fun toggleSelection(id: Long) {
+        _selectedIds.value = _selectedIds.value.toMutableSet().apply {
+            if (contains(id)) remove(id) else add(id)
+        }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun selectAll(ids: List<Long>) {
+        _selectedIds.value = ids.toSet()
+    }
+
+    fun markSelectedAsSent() {
+        val ids = _selectedIds.value.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            repository.markAsSent(ids)
+            _selectedIds.value = emptySet()
+        }
+    }
+
+    fun markSelectedAsUnsent() {
+        val ids = _selectedIds.value.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            repository.markAsUnsent(ids)
+            _selectedIds.value = emptySet()
+        }
+    }
 
     fun deleteReceipt(receipt: Receipt) {
         viewModelScope.launch {
