@@ -14,8 +14,8 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 data class AppSettings(
-    val toEmail: String = "accounts@stitch.money",
-    val ccEmail: String = "henk@stitch.money",
+    val toEmail: String = "",
+    val ccEmail: String = "",
     val subjectTemplate: String = "Parking Receipts {date_range}",
     val fridayReminderEnabled: Boolean = true,
     val reminderHour: Int = 17,
@@ -35,8 +35,8 @@ class SettingsDataStore(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
-            toEmail = prefs[Keys.TO_EMAIL] ?: "accounts@stitch.money",
-            ccEmail = prefs[Keys.CC_EMAIL] ?: "henk@stitch.money",
+            toEmail = prefs[Keys.TO_EMAIL] ?: "",
+            ccEmail = prefs[Keys.CC_EMAIL] ?: "",
             subjectTemplate = prefs[Keys.SUBJECT_TEMPLATE] ?: "Parking Receipts {date_range}",
             fridayReminderEnabled = prefs[Keys.FRIDAY_REMINDER] ?: true,
             reminderHour = prefs[Keys.REMINDER_HOUR] ?: 17,

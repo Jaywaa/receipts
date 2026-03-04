@@ -76,8 +76,7 @@ fun SendPreviewScreen(
     LaunchedEffect(uiState.emailIntent) {
         uiState.emailIntent?.let { intent ->
             try {
-                val chooser = android.content.Intent.createChooser(intent, "Send receipts via")
-                emailLauncher.launch(chooser)
+                emailLauncher.launch(intent)
             } catch (e: Exception) {
                 Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
                 viewModel.clearEmailIntent()

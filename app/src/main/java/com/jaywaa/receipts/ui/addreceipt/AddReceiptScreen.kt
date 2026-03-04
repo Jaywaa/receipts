@@ -90,7 +90,7 @@ fun AddReceiptScreen(
         uiState.error?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
-    var showCamera by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(true) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(

@@ -54,7 +54,7 @@ class EmailIntentBuilder(private val context: Context) {
         )
 
         return Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
+            type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf(toEmail))
             if (ccEmail.isNotBlank()) {
                 putExtra(Intent.EXTRA_CC, arrayOf(ccEmail))
