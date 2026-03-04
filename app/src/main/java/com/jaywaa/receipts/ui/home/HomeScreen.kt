@@ -39,6 +39,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Tab
@@ -50,14 +54,18 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,17 +89,36 @@ fun HomeScreen(
     val unsentReceipts by viewModel.unsentReceipts.collectAsState()
     val sentReceipts by viewModel.sentReceipts.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
+    val pendingDelete by viewModel.pendingDelete.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     val isSelecting = selectedIds.isNotEmpty()
-    val totalUnsent = unsentReceipts.sumOf { it.amount }
-    val currentReceipts = if (selectedTab == 0) unsentReceipts else sentReceipts
+    val displayedUnsent = unsentReceipts.filter { it.id != pendingDelete?.id }
+    val displayedSent = sentReceipts.filter { it.id != pendingDelete?.id }
+    val totalUnsent by remember(displayedUnsent) { derivedStateOf { displayedUnsent.sumOf { it.amount } } }
+    val currentReceipts = if (selectedTab == 0) displayedUnsent else displayedSent
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(pendingDelete) {
+        val receipt = pendingDelete ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = "Receipt deleted",
+            actionLabel = "Undo",
+            duration = SnackbarDuration.Short
+        )
+        when (result) {
+            SnackbarResult.ActionPerformed -> viewModel.undoDelete()
+            SnackbarResult.Dismissed -> viewModel.confirmDelete()
+        }
+    }
 
     LaunchedEffect(selectedTab) {
         viewModel.clearSelection()
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelecting) {
                 TopAppBar(
@@ -103,7 +130,7 @@ fun HomeScreen(
                     },
                     actions = {
                         IconButton(onClick = {
-                            viewModel.selectAll(currentReceipts.map { it.id })
+                            viewModel.toggleSelectAll(currentReceipts.map { it.id })
                         }) {
                             Icon(Icons.Default.SelectAll, contentDescription = "Select all")
                         }
@@ -149,9 +176,9 @@ fun HomeScreen(
             }
         },
         bottomBar = {
-            if (!isSelecting && unsentReceipts.isNotEmpty()) {
+            if (!isSelecting && displayedUnsent.isNotEmpty()) {
                 SendReportBar(
-                    count = unsentReceipts.size,
+                    count = displayedUnsent.size,
                     total = totalUnsent,
                     onClick = onSendReport
                 )
@@ -165,7 +192,7 @@ fun HomeScreen(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            if (unsentReceipts.isNotEmpty()) "Unsent (${unsentReceipts.size})"
+                            if (displayedUnsent.isNotEmpty()) "Unsent (${displayedUnsent.size})"
                             else "Unsent"
                         )
                     }
@@ -347,10 +374,17 @@ private fun ReceiptItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 4.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -438,7 +472,6 @@ private fun SendReportBar(count: Int, total: Double, onClick: () -> Unit) {
 
 fun formatZar(amount: Double): String = "R%.2f".format(amount)
 
-fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
+private val dateFormatter = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
+
+fun formatDate(timestamp: Long): String = dateFormatter.format(Date(timestamp))

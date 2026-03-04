@@ -36,8 +36,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _selectedIds.value = emptySet()
     }
 
-    fun selectAll(ids: List<Long>) {
-        _selectedIds.value = ids.toSet()
+    fun toggleSelectAll(ids: List<Long>) {
+        _selectedIds.value = if (_selectedIds.value.containsAll(ids)) emptySet() else ids.toSet()
     }
 
     fun markSelectedAsSent() {
@@ -58,9 +58,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _pendingDelete = MutableStateFlow<Receipt?>(null)
+    val pendingDelete: StateFlow<Receipt?> = _pendingDelete.asStateFlow()
+
     fun deleteReceipt(receipt: Receipt) {
+        _pendingDelete.value = receipt
+    }
+
+    fun confirmDelete() {
+        val receipt = _pendingDelete.value ?: return
+        _pendingDelete.value = null
         viewModelScope.launch {
             repository.delete(receipt)
         }
+    }
+
+    fun undoDelete() {
+        _pendingDelete.value = null
     }
 }

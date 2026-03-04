@@ -1,5 +1,6 @@
 package com.jaywaa.receipts.ui.settings
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+private fun isValidEmail(value: String): Boolean =
+    value.isBlank() || Patterns.EMAIL_ADDRESS.matcher(value).matches()
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -47,6 +51,10 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
+    val toEmail by viewModel.toEmail.collectAsState()
+    val ccEmail by viewModel.ccEmail.collectAsState()
+    val subjectTemplate by viewModel.subjectTemplate.collectAsState()
+    val pdfFilenameTemplate by viewModel.pdfFilenameTemplate.collectAsState()
     var showTimePicker by remember { mutableStateOf(false) }
 
     if (showTimePicker) {
@@ -114,34 +122,77 @@ fun SettingsScreen(
         ) {
             SectionHeader("Email")
 
+            val toEmailError = toEmail.isNotBlank() && !isValidEmail(toEmail)
             OutlinedTextField(
-                value = settings.toEmail,
+                value = toEmail,
                 onValueChange = { viewModel.updateToEmail(it) },
                 label = { Text("To") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
+                isError = toEmailError,
+                supportingText = if (toEmailError) {{ Text("Invalid email address") }} else null,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
 
+            val ccEmailError = ccEmail.isNotBlank() && !isValidEmail(ccEmail)
             OutlinedTextField(
-                value = settings.ccEmail,
+                value = ccEmail,
                 onValueChange = { viewModel.updateCcEmail(it) },
                 label = { Text("CC") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
+                isError = ccEmailError,
+                supportingText = if (ccEmailError) {{ Text("Invalid email address") }} else null,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = settings.subjectTemplate,
+                value = subjectTemplate,
                 onValueChange = { viewModel.updateSubjectTemplate(it) },
                 label = { Text("Subject template") },
                 supportingText = { Text("Use {date_range}, {total}, {count} as placeholders") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = pdfFilenameTemplate,
+                onValueChange = { viewModel.updatePdfFilenameTemplate(it) },
+                label = { Text("PDF filename template") },
+                supportingText = { Text("Use {date_range}, {total}, {count} as placeholders") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionHeader("Sending")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Auto-mark as sent",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Automatically mark receipts as sent after opening email app",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = settings.autoMarkAsSent,
+                    onCheckedChange = { viewModel.updateAutoMarkAsSent(it) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
             HorizontalDivider()

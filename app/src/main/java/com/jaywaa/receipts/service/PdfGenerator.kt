@@ -8,6 +8,8 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import com.jaywaa.receipts.data.db.Receipt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -23,7 +25,7 @@ class PdfGenerator(private val context: Context) {
         private const val MAX_PHOTO_PX = 1200
     }
 
-    fun generate(receipts: List<Receipt>): File {
+    suspend fun generate(receipts: List<Receipt>, filenameTemplate: String = "parking_receipts_{date_range}"): File = withContext(Dispatchers.IO) {
         val document = PdfDocument()
         val totalAmount = receipts.sumOf { it.amount }
         val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -62,11 +64,16 @@ class PdfGenerator(private val context: Context) {
             document.finishPage(page)
         }
 
-        val outputFile = File(context.cacheDir, "parking_receipts.pdf")
+        val resolvedName = filenameTemplate
+            .replace("{date_range}", dateRange)
+            .replace("{total}", "R${"%.2f".format(totalAmount)}")
+            .replace("{count}", receipts.size.toString())
+            .replace(Regex("[^a-zA-Z0-9._\\-]"), "_")
+        val outputFile = File(context.cacheDir, "$resolvedName.pdf")
         FileOutputStream(outputFile).use { document.writeTo(it) }
         document.close()
 
-        return outputFile
+        outputFile
     }
 
     private fun drawSummaryPage(

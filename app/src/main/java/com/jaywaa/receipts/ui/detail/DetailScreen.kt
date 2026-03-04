@@ -1,5 +1,7 @@
 package com.jaywaa.receipts.ui.detail
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +77,11 @@ fun DetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = uiState.isEditing) {
+        showDiscardDialog = true
+    }
 
     LaunchedEffect(receiptId) {
         viewModel.loadReceipt(receiptId)
@@ -97,6 +104,23 @@ fun DetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Discard changes?") },
+            text = { Text("You have unsaved edits. Discard them?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    viewModel.cancelEditing()
+                }) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) { Text("Keep editing") }
             }
         )
     }
@@ -178,13 +202,21 @@ fun DetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (uiState.isEditing) {
+                        val amountError = uiState.editAmount.isNotEmpty() &&
+                            (uiState.editAmount.toDoubleOrNull() == null || uiState.editAmount.toDoubleOrNull()!! <= 0)
                         OutlinedTextField(
                             value = uiState.editAmount,
-                            onValueChange = { viewModel.onAmountChanged(it) },
+                            onValueChange = { new ->
+                                if (new.isEmpty() || new.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+                                    viewModel.onAmountChanged(new)
+                                }
+                            },
                             label = { Text("Amount (ZAR)") },
                             prefix = { Text("R") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
+                            isError = amountError,
+                            supportingText = if (amountError) {{ Text("Enter a valid amount") }} else null,
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -198,7 +230,9 @@ fun DetailScreen(
                                     Icon(Icons.Default.CalendarMonth, contentDescription = "Pick date")
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDatePicker = true }
                         )
 
                         OutlinedTextField(
@@ -307,7 +341,6 @@ private fun ZoomableImage(photoPath: String, modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatEditDate(timestamp: Long): String {
-    val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
-    return sdf.format(java.util.Date(timestamp))
-}
+private val editDateFormatter = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
+
+private fun formatEditDate(timestamp: Long): String = editDateFormatter.format(java.util.Date(timestamp))

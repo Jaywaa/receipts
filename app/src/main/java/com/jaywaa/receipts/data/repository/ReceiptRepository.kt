@@ -42,6 +42,7 @@ class ReceiptRepository(private val context: Context) {
             ?: throw IllegalArgumentException("Cannot open URI: $uri")
         val bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream.close()
+        bitmap ?: throw IllegalArgumentException("Failed to decode image from URI: $uri")
         saveBitmap(bitmap)
     }
 

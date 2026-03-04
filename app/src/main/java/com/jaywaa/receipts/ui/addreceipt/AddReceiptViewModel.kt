@@ -66,6 +66,10 @@ class AddReceiptViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.value = _uiState.value.copy(note = note)
     }
 
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+
     fun save() {
         val state = _uiState.value
         val photoPath = state.photoPath

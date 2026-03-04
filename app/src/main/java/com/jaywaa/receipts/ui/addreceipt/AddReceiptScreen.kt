@@ -14,6 +14,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,7 +91,10 @@ fun AddReceiptScreen(
     }
 
     LaunchedEffect(uiState.error) {
-        uiState.error?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
     }
 
     var showCamera by remember { mutableStateOf(true) }
@@ -190,13 +197,21 @@ fun AddReceiptScreen(
                     }
                 }
 
+                val amountError = uiState.amount.isNotEmpty() &&
+                    (uiState.amount.toDoubleOrNull() == null || uiState.amount.toDoubleOrNull()!! <= 0)
                 OutlinedTextField(
                     value = uiState.amount,
-                    onValueChange = { viewModel.onAmountChanged(it) },
+                    onValueChange = { new ->
+                        if (new.isEmpty() || new.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+                            viewModel.onAmountChanged(new)
+                        }
+                    },
                     label = { Text("Amount (ZAR)") },
                     prefix = { Text("R") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
+                    isError = amountError,
+                    supportingText = if (amountError) {{ Text("Enter a valid amount") }} else null,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -210,7 +225,9 @@ fun AddReceiptScreen(
                             Icon(Icons.Default.CalendarMonth, contentDescription = "Pick date")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
                 )
 
                 OutlinedTextField(
@@ -283,27 +300,37 @@ private fun CameraCapture(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(onClick = {
-                imageCapture.takePicture(
-                    ContextCompat.getMainExecutor(context),
-                    object : ImageCapture.OnImageCapturedCallback() {
-                        override fun onCaptureSuccess(image: ImageProxy) {
-                            val bitmap = image.toBitmap()
-                            val rotated = rotateBitmap(bitmap, image.imageInfo.rotationDegrees.toFloat())
-                            image.close()
-                            onPhotoCaptured(rotated)
+            FloatingActionButton(
+                onClick = {
+                    imageCapture.takePicture(
+                        ContextCompat.getMainExecutor(context),
+                        object : ImageCapture.OnImageCapturedCallback() {
+                            override fun onCaptureSuccess(image: ImageProxy) {
+                                val bitmap = image.toBitmap()
+                                val rotated = rotateBitmap(bitmap, image.imageInfo.rotationDegrees.toFloat())
+                                image.close()
+                                onPhotoCaptured(rotated)
+                            }
+                            override fun onError(exception: ImageCaptureException) {
+                                Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                        override fun onError(exception: ImageCaptureException) {
-                            Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    )
+                },
+                modifier = Modifier
+                    .size(72.dp)
+                    .border(3.dp, MaterialTheme.colorScheme.onPrimary, CircleShape),
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = "Capture",
+                    modifier = Modifier.size(32.dp)
                 )
-            }) {
-                Icon(Icons.Default.CameraAlt, contentDescription = null)
-                Spacer(modifier = Modifier.size(8.dp))
-                Text("Capture")
             }
             TextButton(onClick = onCancel) {
                 Text("Cancel")
@@ -318,7 +345,6 @@ private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }
 
-private fun formatDateForField(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
+private val fieldDateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+
+private fun formatDateForField(timestamp: Long): String = fieldDateFormatter.format(Date(timestamp))

@@ -22,7 +22,8 @@ data class SendUiState(
     val isGenerating: Boolean = false,
     val emailIntent: Intent? = null,
     val error: String? = null,
-    val markedSent: Boolean = false
+    val markedSent: Boolean = false,
+    val showSentConfirmation: Boolean = false
 )
 
 class SendViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,7 +61,7 @@ class SendViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val settings: AppSettings = settingsDataStore.settings.first()
-                val pdfFile = pdfGenerator.generate(selected)
+                val pdfFile = pdfGenerator.generate(selected, settings.pdfFilenameTemplate)
                 val intent = emailIntentBuilder.buildEmailIntent(
                     pdfFile = pdfFile,
                     receipts = selected,
@@ -78,15 +79,38 @@ class SendViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onEmailResult() {
+        viewModelScope.launch {
+            val autoMark = settingsDataStore.settings.first().autoMarkAsSent
+            if (autoMark) {
+                onEmailSent()
+            } else {
+                _uiState.value = _uiState.value.copy(emailIntent = null, showSentConfirmation = true)
+            }
+        }
+    }
+
     fun onEmailSent() {
         val selected = getSelectedReceipts()
         viewModelScope.launch {
             repository.markAsSent(selected.map { it.id })
-            _uiState.value = _uiState.value.copy(emailIntent = null, markedSent = true)
+            _uiState.value = _uiState.value.copy(
+                emailIntent = null,
+                markedSent = true,
+                showSentConfirmation = false
+            )
         }
+    }
+
+    fun dismissSentConfirmation() {
+        _uiState.value = _uiState.value.copy(showSentConfirmation = false)
     }
 
     fun clearEmailIntent() {
         _uiState.value = _uiState.value.copy(emailIntent = null)
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 }

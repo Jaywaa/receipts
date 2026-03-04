@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -70,7 +72,7 @@ fun SendPreviewScreen(
     val emailLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        viewModel.onEmailSent()
+        viewModel.onEmailResult()
     }
 
     LaunchedEffect(uiState.emailIntent) {
@@ -89,7 +91,28 @@ fun SendPreviewScreen(
     }
 
     LaunchedEffect(uiState.error) {
-        uiState.error?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
+    }
+
+    if (uiState.showSentConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissSentConfirmation() },
+            title = { Text("Mark as sent?") },
+            text = { Text("Move the included receipts to sent?") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onEmailSent() }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissSentConfirmation() }) {
+                    Text("No")
+                }
+            }
+        )
     }
 
     Scaffold(

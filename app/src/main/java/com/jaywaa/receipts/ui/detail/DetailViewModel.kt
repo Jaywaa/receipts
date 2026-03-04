@@ -69,6 +69,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
         val state = _uiState.value
         val receipt = state.receipt ?: return
         val amount = state.editAmount.toDoubleOrNull() ?: return
+        if (amount <= 0) return
 
         viewModelScope.launch {
             val updated = receipt.copy(
