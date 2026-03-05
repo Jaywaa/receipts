@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -149,7 +150,11 @@ fun AddReceiptScreen(
                     viewModel.onPhotoCaptured(bitmap)
                     showCamera = false
                 },
-                onCancel = { showCamera = false }
+                onCancel = { showCamera = false },
+                onGallery = {
+                    galleryLauncher.launch("image/*")
+                    showCamera = false
+                }
             )
         } else {
             Column(
@@ -264,7 +269,8 @@ fun AddReceiptScreen(
 private fun CameraCapture(
     modifier: Modifier = Modifier,
     onPhotoCaptured: (Bitmap) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onGallery: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -295,13 +301,26 @@ private fun CameraCapture(
             modifier = Modifier.fillMaxSize()
         )
 
-        Column(
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 32.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = onGallery,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    Icons.Default.PhotoLibrary,
+                    contentDescription = "Gallery",
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+
             FloatingActionButton(
                 onClick = {
                     imageCapture.takePicture(
@@ -332,8 +351,17 @@ private fun CameraCapture(
                     modifier = Modifier.size(32.dp)
                 )
             }
-            TextButton(onClick = onCancel) {
-                Text("Cancel")
+
+            IconButton(
+                onClick = onCancel,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Cancel",
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }
