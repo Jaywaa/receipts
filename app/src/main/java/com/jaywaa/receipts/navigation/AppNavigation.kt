@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 object Home
 
 @Serializable
-object AddReceipt
+data class AddReceipt(val sharedImageUri: String? = null)
 
 @Serializable
 data class ReceiptDetail(val receiptId: Long)

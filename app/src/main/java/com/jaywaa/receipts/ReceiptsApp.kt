@@ -1,7 +1,9 @@
 package com.jaywaa.receipts
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -18,22 +20,30 @@ import com.jaywaa.receipts.ui.send.SendPreviewScreen
 import com.jaywaa.receipts.ui.settings.SettingsScreen
 
 @Composable
-fun ReceiptsApp(context: Context) {
+fun ReceiptsApp(context: Context, sharedImageUri: Uri? = null) {
     val navController = rememberNavController()
+
+    LaunchedEffect(sharedImageUri) {
+        if (sharedImageUri != null) {
+            navController.navigate(AddReceipt(sharedImageUri = sharedImageUri.toString()))
+        }
+    }
 
     NavHost(navController = navController, startDestination = Home) {
         composable<Home> {
             HomeScreen(
-                onAddReceipt = { navController.navigate(AddReceipt) },
+                onAddReceipt = { navController.navigate(AddReceipt()) },
                 onReceiptClick = { id -> navController.navigate(ReceiptDetail(id)) },
                 onSendReport = { navController.navigate(SendPreview) },
                 onSettings = { navController.navigate(Settings) }
             )
         }
-        composable<AddReceipt> {
+        composable<AddReceipt> { backStackEntry ->
+            val route = backStackEntry.toRoute<AddReceipt>()
             AddReceiptScreen(
                 context = context,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                sharedImageUri = route.sharedImageUri
             )
         }
         composable<ReceiptDetail> { backStackEntry ->

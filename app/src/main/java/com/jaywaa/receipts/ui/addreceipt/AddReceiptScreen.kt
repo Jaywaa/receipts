@@ -83,9 +83,16 @@ import java.util.Locale
 fun AddReceiptScreen(
     context: Context,
     onNavigateBack: () -> Unit,
+    sharedImageUri: String? = null,
     viewModel: AddReceiptViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(sharedImageUri) {
+        if (sharedImageUri != null) {
+            viewModel.onPhotoFromUri(Uri.parse(sharedImageUri))
+        }
+    }
 
     LaunchedEffect(uiState.saved) {
         if (uiState.saved) onNavigateBack()
@@ -98,7 +105,7 @@ fun AddReceiptScreen(
         }
     }
 
-    var showCamera by remember { mutableStateOf(true) }
+    var showCamera by remember { mutableStateOf(sharedImageUri == null) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
