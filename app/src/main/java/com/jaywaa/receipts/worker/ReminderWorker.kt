@@ -36,17 +36,21 @@ class ReminderWorker(
         fun schedule(context: Context, hour: Int, minute: Int) {
             val now = Calendar.getInstance()
             val target = Calendar.getInstance().apply {
-                set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY)
                 set(Calendar.HOUR_OF_DAY, hour)
                 set(Calendar.MINUTE, minute)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
-                if (before(now)) add(Calendar.WEEK_OF_YEAR, 1)
+                while (get(Calendar.DAY_OF_WEEK) != Calendar.FRIDAY || !after(now)) {
+                    add(Calendar.DAY_OF_YEAR, 1)
+                }
             }
 
             val initialDelay = target.timeInMillis - now.timeInMillis
 
-            val request = PeriodicWorkRequestBuilder<ReminderWorker>(7, TimeUnit.DAYS)
+            val request = PeriodicWorkRequestBuilder<ReminderWorker>(
+                7, TimeUnit.DAYS,
+                15, TimeUnit.MINUTES
+            )
                 .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .build()
 
