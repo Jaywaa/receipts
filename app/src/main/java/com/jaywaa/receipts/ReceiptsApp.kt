@@ -20,12 +20,22 @@ import com.jaywaa.receipts.ui.send.SendPreviewScreen
 import com.jaywaa.receipts.ui.settings.SettingsScreen
 
 @Composable
-fun ReceiptsApp(context: Context, sharedImageUri: Uri? = null) {
+fun ReceiptsApp(
+    context: Context,
+    sharedImageUri: Uri? = null,
+    startAtAddReceipt: Boolean = false
+) {
     val navController = rememberNavController()
 
     LaunchedEffect(sharedImageUri) {
         if (sharedImageUri != null) {
             navController.navigate(AddReceipt(sharedImageUri = sharedImageUri.toString()))
+        }
+    }
+
+    LaunchedEffect(startAtAddReceipt) {
+        if (startAtAddReceipt) {
+            navController.navigate(AddReceipt())
         }
     }
 

@@ -32,12 +32,21 @@ class MainActivity : ComponentActivity() {
         scheduleReminderIfNeeded()
 
         val sharedImageUri = extractSharedImageUri(intent)
+        val startAtAddReceipt = intent?.action == ACTION_QUICK_ADD
 
         setContent {
             ReceiptsTheme {
-                ReceiptsApp(context = applicationContext, sharedImageUri = sharedImageUri)
+                ReceiptsApp(
+                    context = applicationContext,
+                    sharedImageUri = sharedImageUri,
+                    startAtAddReceipt = startAtAddReceipt
+                )
             }
         }
+    }
+
+    companion object {
+        const val ACTION_QUICK_ADD = "com.jaywaa.receipts.ACTION_QUICK_ADD"
     }
 
     private fun extractSharedImageUri(intent: Intent?): Uri? {
