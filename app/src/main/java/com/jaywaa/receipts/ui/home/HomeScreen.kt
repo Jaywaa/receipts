@@ -272,6 +272,7 @@ private fun SwipeToDeleteReceiptItem(
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
             onDelete()
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }
 

@@ -67,9 +67,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun confirmDelete() {
         val receipt = _pendingDelete.value ?: return
-        _pendingDelete.value = null
         viewModelScope.launch {
             repository.delete(receipt)
+            _pendingDelete.value = null
         }
     }
 
