@@ -26,6 +26,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val isSelecting: Boolean get() = _selectedIds.value.isNotEmpty()
 
+    private val _expandedBatches = MutableStateFlow<Set<Long>>(emptySet())
+    val expandedBatches: StateFlow<Set<Long>> = _expandedBatches.asStateFlow()
+
+    fun toggleBatchExpanded(sentAt: Long) {
+        _expandedBatches.value = _expandedBatches.value.toMutableSet().apply {
+            if (contains(sentAt)) remove(sentAt) else add(sentAt)
+        }
+    }
+
     fun toggleSelection(id: Long) {
         _selectedIds.value = _selectedIds.value.toMutableSet().apply {
             if (contains(id)) remove(id) else add(id)

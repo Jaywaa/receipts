@@ -1,6 +1,7 @@
 package com.jaywaa.receipts.ui.home
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Receipt
@@ -63,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -90,6 +93,7 @@ fun HomeScreen(
     val sentReceipts by viewModel.sentReceipts.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
     val pendingDelete by viewModel.pendingDelete.collectAsState()
+    val expandedBatches by viewModel.expandedBatches.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     val isSelecting = selectedIds.isNotEmpty()
@@ -204,34 +208,127 @@ fun HomeScreen(
                 )
             }
 
-            val emptyMessage = if (selectedTab == 0) "No unsent receipts" else "No sent receipts yet"
-
-            if (currentReceipts.isEmpty()) {
-                EmptyState(message = emptyMessage)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    items(currentReceipts, key = { it.id }) { receipt ->
-                        if (isSelecting) {
-                            SelectableReceiptItem(
-                                receipt = receipt,
-                                selected = selectedIds.contains(receipt.id),
-                                onClick = { viewModel.toggleSelection(receipt.id) }
-                            )
-                        } else {
-                            SwipeToDeleteReceiptItem(
-                                receipt = receipt,
-                                onClick = { onReceiptClick(receipt.id) },
-                                onLongClick = { viewModel.toggleSelection(receipt.id) },
-                                onDelete = { viewModel.deleteReceipt(receipt) }
-                            )
+            if (selectedTab == 0) {
+                if (displayedUnsent.isEmpty()) {
+                    EmptyState(message = "No unsent receipts")
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        items(displayedUnsent, key = { it.id }) { receipt ->
+                            if (isSelecting) {
+                                SelectableReceiptItem(
+                                    receipt = receipt,
+                                    selected = selectedIds.contains(receipt.id),
+                                    onClick = { viewModel.toggleSelection(receipt.id) }
+                                )
+                            } else {
+                                SwipeToDeleteReceiptItem(
+                                    receipt = receipt,
+                                    onClick = { onReceiptClick(receipt.id) },
+                                    onLongClick = { viewModel.toggleSelection(receipt.id) },
+                                    onDelete = { viewModel.deleteReceipt(receipt) }
+                                )
+                            }
                         }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                }
+            } else {
+                if (displayedSent.isEmpty()) {
+                    EmptyState(message = "No sent receipts yet")
+                } else {
+                    val groupedSent = remember(displayedSent) {
+                        displayedSent
+                            .groupBy { it.sentAt ?: 0L }
+                            .map { (sentAt, receipts) -> SentBatch(sentAt, receipts) }
+                            .sortedByDescending { it.sentAt }
+                    }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        groupedSent.forEach { batch ->
+                            item(key = "batch_${batch.sentAt}") {
+                                BatchHeader(
+                                    sentAt = batch.sentAt,
+                                    receiptCount = batch.receipts.size,
+                                    totalAmount = batch.receipts.sumOf { it.amount },
+                                    isExpanded = expandedBatches.contains(batch.sentAt),
+                                    onClick = { viewModel.toggleBatchExpanded(batch.sentAt) }
+                                )
+                            }
+                            if (expandedBatches.contains(batch.sentAt)) {
+                                items(batch.receipts, key = { it.id }) { receipt ->
+                                    if (isSelecting) {
+                                        SelectableReceiptItem(
+                                            receipt = receipt,
+                                            selected = selectedIds.contains(receipt.id),
+                                            onClick = { viewModel.toggleSelection(receipt.id) }
+                                        )
+                                    } else {
+                                        SwipeToDeleteReceiptItem(
+                                            receipt = receipt,
+                                            onClick = { onReceiptClick(receipt.id) },
+                                            onLongClick = { viewModel.toggleSelection(receipt.id) },
+                                            onDelete = { viewModel.deleteReceipt(receipt) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
+                    }
                 }
             }
+        }
+    }
+}
+
+private data class SentBatch(val sentAt: Long, val receipts: List<Receipt>)
+
+@Composable
+private fun BatchHeader(
+    sentAt: Long,
+    receiptCount: Int,
+    totalAmount: Double,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (isExpanded) 0f else -90f,
+        label = "chevron"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.ExpandMore,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            modifier = Modifier
+                .size(20.dp)
+                .rotate(rotation),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = formatBatchDate(sentAt),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "$receiptCount receipt${if (receiptCount != 1) "s" else ""} · ${formatZar(totalAmount)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }
@@ -474,5 +571,9 @@ private fun SendReportBar(count: Int, total: Double, onClick: () -> Unit) {
 fun formatZar(amount: Double): String = "R%.2f".format(amount)
 
 private val dateFormatter = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
+private val batchDateFormatter = SimpleDateFormat("EEE, dd MMM yyyy 'at' HH:mm", Locale.getDefault())
 
 fun formatDate(timestamp: Long): String = dateFormatter.format(Date(timestamp))
+
+private fun formatBatchDate(timestamp: Long): String =
+    if (timestamp == 0L) "Unknown date" else batchDateFormatter.format(Date(timestamp))
