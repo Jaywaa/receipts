@@ -29,7 +29,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestPermissionsIfNeeded()
-        scheduleReminderIfNeeded()
 
         val sharedImageUri = extractSharedImageUri(intent)
         val startAtAddReceipt = intent?.action == ACTION_QUICK_ADD
@@ -43,6 +42,11 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        scheduleReminderIfNeeded()
     }
 
     companion object {

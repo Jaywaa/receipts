@@ -47,6 +47,14 @@
                 android:resource="@xml/quick_add_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".worker.TimezoneChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
