@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 data class AppSettings(
+    val fromEmail: String = "",
     val toEmail: String = "",
     val ccEmail: String = "",
     val subjectTemplate: String = "Parking Receipts {date_range}",
@@ -27,6 +28,7 @@ data class AppSettings(
 class SettingsDataStore(private val context: Context) {
 
     private object Keys {
+        val FROM_EMAIL = stringPreferencesKey("from_email")
         val TO_EMAIL = stringPreferencesKey("to_email")
         val CC_EMAIL = stringPreferencesKey("cc_email")
         val SUBJECT_TEMPLATE = stringPreferencesKey("subject_template")
@@ -39,6 +41,7 @@ class SettingsDataStore(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
+            fromEmail = prefs[Keys.FROM_EMAIL] ?: "",
             toEmail = prefs[Keys.TO_EMAIL] ?: "",
             ccEmail = prefs[Keys.CC_EMAIL] ?: "",
             subjectTemplate = prefs[Keys.SUBJECT_TEMPLATE] ?: "Parking Receipts {date_range}",
@@ -48,6 +51,10 @@ class SettingsDataStore(private val context: Context) {
             reminderMinute = prefs[Keys.REMINDER_MINUTE] ?: 0,
             autoMarkAsSent = prefs[Keys.AUTO_MARK_AS_SENT] ?: true
         )
+    }
+
+    suspend fun updateFromEmail(email: String) {
+        context.dataStore.edit { it[Keys.FROM_EMAIL] = email }
     }
 
     suspend fun updateToEmail(email: String) {

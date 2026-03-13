@@ -27,6 +27,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val settings: StateFlow<AppSettings> = settingsDataStore.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
+    private val _fromEmail = MutableStateFlow("")
+    val fromEmail: StateFlow<String> = _fromEmail.asStateFlow()
+
     private val _toEmail = MutableStateFlow("")
     val toEmail: StateFlow<String> = _toEmail.asStateFlow()
 
@@ -44,6 +47,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     init {
         viewModelScope.launch {
             val initial = settingsDataStore.settings.first()
+            _fromEmail.value = initial.fromEmail
             _toEmail.value = initial.toEmail
             _ccEmail.value = initial.ccEmail
             _subjectTemplate.value = initial.subjectTemplate
@@ -51,10 +55,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             seeded = true
         }
 
+        _fromEmail.drop(1).debounce(500).onEach { if (seeded) settingsDataStore.updateFromEmail(it) }.launchIn(viewModelScope)
         _toEmail.drop(1).debounce(500).onEach { if (seeded) settingsDataStore.updateToEmail(it) }.launchIn(viewModelScope)
         _ccEmail.drop(1).debounce(500).onEach { if (seeded) settingsDataStore.updateCcEmail(it) }.launchIn(viewModelScope)
         _subjectTemplate.drop(1).debounce(500).onEach { if (seeded) settingsDataStore.updateSubjectTemplate(it) }.launchIn(viewModelScope)
         _pdfFilenameTemplate.drop(1).debounce(500).onEach { if (seeded) settingsDataStore.updatePdfFilenameTemplate(it) }.launchIn(viewModelScope)
+    }
+
+    fun updateFromEmail(email: String) {
+        _fromEmail.value = email
     }
 
     fun updateToEmail(email: String) {

@@ -51,6 +51,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
+    val fromEmail by viewModel.fromEmail.collectAsState()
     val toEmail by viewModel.toEmail.collectAsState()
     val ccEmail by viewModel.ccEmail.collectAsState()
     val subjectTemplate by viewModel.subjectTemplate.collectAsState()
@@ -121,6 +122,20 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             SectionHeader("Email")
+
+            val fromEmailError = fromEmail.isNotBlank() && !isValidEmail(fromEmail)
+            OutlinedTextField(
+                value = fromEmail,
+                onValueChange = { viewModel.updateFromEmail(it) },
+                label = { Text("From") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                isError = fromEmailError,
+                supportingText = if (fromEmailError) {{ Text("Invalid email address") }}
+                    else {{ Text("Your sender address (must be a Gmail account on this device)") }},
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
             val toEmailError = toEmail.isNotBlank() && !isValidEmail(toEmail)
             OutlinedTextField(

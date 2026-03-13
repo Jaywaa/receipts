@@ -65,6 +65,7 @@ class SendViewModel(application: Application) : AndroidViewModel(application) {
                 val intent = emailIntentBuilder.buildEmailIntent(
                     pdfFile = pdfFile,
                     receipts = selected,
+                    fromEmail = settings.fromEmail,
                     toEmail = settings.toEmail,
                     ccEmail = settings.ccEmail,
                     subjectTemplate = settings.subjectTemplate

@@ -15,6 +15,7 @@ class EmailIntentBuilder(private val context: Context) {
     fun buildEmailIntent(
         pdfFile: File,
         receipts: List<Receipt>,
+        fromEmail: String,
         toEmail: String,
         ccEmail: String,
         subjectTemplate: String
@@ -55,6 +56,9 @@ class EmailIntentBuilder(private val context: Context) {
 
         return Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
+            if (fromEmail.isNotBlank()) {
+                putExtra("from", fromEmail)
+            }
             putExtra(Intent.EXTRA_EMAIL, arrayOf(toEmail))
             if (ccEmail.isNotBlank()) {
                 putExtra(Intent.EXTRA_CC, arrayOf(ccEmail))
