@@ -1,27 +1,41 @@
-# Parking Receipts
+# Receipts (Parking Receipts)
 
-Android app for photographing parking receipts, tracking amounts in ZAR, and bulk-sending them as a collated PDF via email.
+Android app for capturing parking receipts, tracking amounts in ZAR, and sending selected receipts as a single PDF by email.
 
 ## Features
 
-- **Capture receipts** via camera or gallery with amount, date, and optional note
-- **Track unsent/sent** receipts on the home screen with tabbed views and swipe-to-delete
-- **Receipt detail** — view, edit, or delete individual receipts with zoomable photo
-- **Bulk send** — preview selected receipts, generate an A4 PDF (summary page + one page per receipt), and open your email client with everything pre-filled (To, CC, subject, body, PDF attachment)
-- **Friday reminder** notification via WorkManager to prompt weekly submission
-- **Configurable settings** — recipient (To/CC), subject template with `{date_range}`, `{total}`, `{count}` placeholders, and reminder time
+- Capture receipts via camera or gallery with amount, date, and optional note
+- Import shared images (`image/*`) from other apps directly into Add Receipt
+- Manage Unsent/Sent receipts with swipe-to-delete, undo, multi-select, and bulk mark sent/unsent
+- View receipt details with zoomable photo, edit fields, delete, and toggle sent status
+- Generate a collated A4 PDF and open your email app with From/To/CC, subject/body, and attachment prefilled
+- Configure subject and PDF filename templates using `{date_range}`, `{total}`, and `{count}`
+- Friday reminder notifications (WorkManager) with configurable reminder time
+- Home screen quick-add widget for launching receipt capture
 
 ## Tech Stack
 
-Kotlin · Jetpack Compose · Material 3 · Room · Navigation Compose · CameraX · WorkManager · DataStore · Coil
+Kotlin · Jetpack Compose · Material 3 · Navigation Compose · Room (KSP) · CameraX · WorkManager · DataStore Preferences · Coil · Kotlinx Serialization · Glance App Widget
 
 ## Build
 
-Open in Android Studio, sync Gradle, run on device/emulator (API 24+).
+Open in Android Studio, sync Gradle, and run on a device/emulator (API 24+), or build from CLI:
 
-Requires: AGP 9.0.1, Kotlin 2.0.21, Java 17+, Gradle 9.2.1.
+```bash
+./gradlew :app:assembleDebug
+```
+
+Toolchain versions:
+
+- AGP 9.0.1
+- Kotlin 2.0.21
+- Gradle 9.2.1
+- Java 17+
+- minSdk 24, targetSdk 36, compileSdk 36
 
 ## Permissions
 
 - **CAMERA** — capture receipt photos
 - **POST_NOTIFICATIONS** — Friday reminder alerts
+
+Camera hardware is optional (`android.hardware.camera` is not required).
